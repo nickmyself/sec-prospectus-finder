@@ -232,23 +232,23 @@ if submit_btn:
                     return f"[打开]({r.get('link')})"
                 return ""
             if not df.empty:
-                df_display = df.copy()
-                df_display["link"] = df_display.apply(format_link, axis=1)
-                # sort and merge ticker column visually: show ticker only on first row per group
-                df_display = df_display.sort_values(by=["ticker", "filingDate"], ascending=[True, False])
-                df_display["ticker_display"] = df_display["ticker"].astype(str)
-                df_display.loc[df_display["ticker_display"].duplicated(), "ticker_display"] = ""
                 st.markdown("### 结果")
                 # build HTML table with rowspan on ticker to visually merge ticker cells
-                df_full = df_display.drop(columns=["ticker_display"]).copy()
+                # Use original df (not df_display) to preserve original link URLs
+                df_full = df.copy()
                 df_full = df_full.reset_index(drop=True)
                 html = []
                 html.append("<style>table.prospectus {border-collapse:collapse; width:100%;} table.prospectus th, table.prospectus td {border:1px solid #ddd; padding:8px; text-align:left;} table.prospectus th {background:#f6f6f6;}</style>")
                 html.append("<table class=\"prospectus\">")
                 # header
                 html.append("<tr><th style='width:12%'>Ticker</th><th style='width:10%'>CIK</th><th style='width:10%'>Form</th><th style='width:12%'>Filing Date</th><th style='width:10%'>Accession</th><th>Description</th><th style='width:8%'>Link</th></tr>")
-                # group by ticker
+                # group by ticker and sort each group's filings by filingDate desc
                 for ticker, group in df_full.groupby('ticker'):
+                    # ensure proper date sort (filingDate format YYYY-MM-DD)
+                    if 'filingDate' in group.columns:
+                        group = group.sort_values(by='filingDate', ascending=False, na_position='last')
+                    # Limit to most recent 6 filings per ticker
+                    group = group.head(6)
                     rows = group.to_dict('records')
                     rowspan = len(rows)
                     for i, row in enumerate(rows):
@@ -275,7 +275,7 @@ if submit_btn:
                 # prepare downloads (use the full data, sorted)
                 csv = df_full.to_csv(index=False)
                 if opt_output_json:
-                    json_data = df_display.drop(columns=["ticker_display"]).to_json(orient="records", force_ascii=False)
+                    json_data = df_full.to_json(orient="records", force_ascii=False)
                 else:
                     json_data = None
                 st.download_button("下载 CSV", data=csv, file_name="prospectus_results.csv", mime="text/csv")
