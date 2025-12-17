@@ -1,14 +1,16 @@
 import re
 import time
 import json
+import os
 import requests
 import pandas as pd
 import streamlit as st
 from datetime import datetime, timedelta
 from urllib.parse import urljoin
 
+USER_AGENT = os.environ.get("SEC_USER_AGENT", "zhaojw42@gmail.com - prospectus-finder (streamlit demo)")
 HEADERS = {
-    "User-Agent": "zhaojw42@gmail.com - prospectus-finder (streamlit demo)",
+    "User-Agent": USER_AGENT,
     "Accept": "application/json, text/plain, */*"
 }
 
